@@ -7,12 +7,25 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server, {
+import { Server } from 'socket.io';
+
+const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.NODE_ENV === "production" 
+      ? ["https://tuchat.onrender.com"] 
+      : "*",
     methods: ["GET", "POST"],
-    transports: ['websocket']
+    transports: ['websocket', 'polling']
   }
+});
+
+// Manejo de conexiones
+io.on('connection', (socket) => {
+  console.log('✅ Nuevo cliente conectado:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('❌ Cliente desconectado:', socket.id);
+  });
 });
 
 // Almacenamiento en memoria (para demo)
@@ -85,6 +98,12 @@ io.on('connection', (socket) => {
     
     io.emit('typingUpdate', Array.from(typingUsers));
   }
+});
+
+const { RateLimiterMemory } = require('rate-limiter-flexible');
+const rateLimiter = new RateLimiterMemory({
+  points: 10, // 10 conexiones
+  duration: 1 // por segundo
 });
 
 const PORT = process.env.PORT || 3000;
