@@ -58,34 +58,34 @@ function initChat(messages) {
 }
 
 function addMessage(message, checkDate = true) {
-  const isCurrentUser = message.user.username === currentUser.username;
+    const isCurrentUser = message.user.username === currentUser.username;
+    
+    // Mostrar fecha si cambió (opcional)
+    if (checkDate && message.date !== lastDateDisplayed) {
+      addDateDivider(message.date);
+      lastDateDisplayed = message.date;
+    }
   
-  // Mostrar fecha si cambió
-  if (checkDate && message.date !== lastDateDisplayed) {
-    addDateDivider(message.date);
-    lastDateDisplayed = message.date;
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${isCurrentUser ? 'sent' : 'received'}`; // Clase CSS clave
+    
+    messageEl.innerHTML = `
+      <div class="message-header">
+        <span class="username">${message.user.username}</span>
+        <small class="timestamp">${message.timestamp}</small>
+      </div>
+      <div class="message-content">${message.content}</div>
+    `;
+  
+    // Color solo para mensajes recibidos
+    if (!isCurrentUser) {
+      messageEl.querySelector('.username').style.color = message.user.color;
+      messageEl.querySelector('.message-content').style.color = message.user.color;
+    }
+  
+    chatEl.appendChild(messageEl);
+    chatEl.scrollTop = chatEl.scrollHeight;
   }
-  
-  const messageEl = document.createElement('div');
-  messageEl.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
-  
-  messageEl.innerHTML = `
-    <div class="message-header">
-      <span class="username">${message.user.username}</span>
-      <small class="timestamp">${message.timestamp}</small>
-    </div>
-    <div class="message-content">${message.content}</div>
-  `;
-  
-  // Color para mensajes recibidos
-  if (!isCurrentUser) {
-    messageEl.querySelector('.username').style.color = message.user.color;
-    messageEl.querySelector('.message-content').style.color = message.user.color;
-  }
-  
-  chatEl.appendChild(messageEl);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
 
 function addDateDivider(dateString) {
   const dividerEl = document.createElement('div');
