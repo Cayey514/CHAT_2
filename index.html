@@ -1,26 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat Simple</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-    #chat { height: 300px; border: 1px solid #ddd; padding: 10px; overflow-y: scroll; margin-bottom: 10px; }
-    #message-form { display: flex; }
-    #message-input { flex: 1; padding: 8px; }
-    button { padding: 8px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }
-    .message { margin-bottom: 10px; }
-    .username { font-weight: bold; }
-  </style>
+  <title>Chat </title>
+  <link rel="stylesheet" href="style.css">
+
 </head>
 <body>
-  <h1>Chat Simple</h1>
-  
-  <div id="auth" style="margin-bottom: 20px;">
-    <input type="text" id="username" placeholder="Tu nombre">
-    <button id="register-btn">Entrar al chat</button>
+  <div id="auth">
+    <h2>Bienvenido al Chat</h2>
+    <input type="text" id="username" placeholder="Tu nombre de usuario">
+    <button id="register-btn">Ingresar</button>
   </div>
   
-  <div id="chat-container" style="display: none;">
+  <div id="chat-container">
     <div id="chat"></div>
     <form id="message-form">
       <input type="text" id="message-input" placeholder="Escribe un mensaje..." autocomplete="off">
@@ -29,58 +21,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    let currentUser = {};
-    
-    // Registro
-    document.getElementById('register-btn').addEventListener('click', () => {
-      const username = document.getElementById('username').value.trim();
-      if (username) {
-        socket.emit('register', username);
-      }
-    });
-    
-    // Confirmación de registro
-    socket.on('registered', (user) => {
-      currentUser = user;
-      document.getElementById('auth').style.display = 'none';
-      document.getElementById('chat-container').style.display = 'block';
-    });
-    
-    // Manejar mensajes
-    socket.on('newMessage', (message) => {
-      addMessage(message);
-    });
-    
-    // Cargar historial
-    socket.on('messageHistory', (msgs) => {
-      msgs.forEach(addMessage);
-    });
-    
-    // Enviar mensaje
-    document.getElementById('message-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = document.getElementById('message-input');
-      socket.emit('sendMessage', input.value);
-      input.value = '';
-    });
-    
-    // Mostrar mensaje en el chat
-    function addMessage(message) {
-      const chat = document.getElementById('chat');
-      const msgElement = document.createElement('div');
-      msgElement.className = 'message';
-      msgElement.innerHTML = `
-        <span class="username" style="color: ${message.user.color}">
-          ${message.user.username}:
-        </span>
-        <span style="color: ${message.user.color}">${message.content}</span>
-        <small>(${message.timestamp})</small>
-      `;
-      chat.appendChild(msgElement);
-      chat.scrollTop = chat.scrollHeight;
-    }
-  </script>
+ <script src="script.js"></script>
 </body>
 </html>

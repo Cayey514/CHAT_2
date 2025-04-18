@@ -7,63 +7,85 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
-const MESSAGES_FILE = 'messages.json';
-
-// Cargar mensajes existentes
-let messages = [];
-if (fs.existsSync(MESSAGES_FILE)) {
-  try {
-    messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
-  } catch (err) {
-    console.error('Error cargando mensajes:', err);
+const io = socketio(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    transports: ['websocket']
   }
-}
+});
 
-// Configuración básica
+// Almacenamiento en memoria (para demo)
+const users = {};
+const messages = [];
+const typingUsers = new Set();
+
+// Servir frontend
 app.use(express.static(path.join(__dirname, '/')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-const users = {};
-
+// WebSocket events
 io.on('connection', (socket) => {
   console.log('Nuevo usuario conectado');
+  
+  // Enviar historial
   socket.emit('messageHistory', messages);
   
+  // Registrar usuario
   socket.on('register', (username) => {
-    const colors = ['#FF5733', '#33FF57', '#3357FF', '#F333FF'];
+    const colors = ['#FF5733', '#33FF57', '#3357FF', '#F333FF', '#33FFF3'];
     users[socket.id] = {
       username,
-      color: colors[Object.keys(users).length % colors.length]
+      color: colors[Object.keys(users).length % colors.length],
+      socketId: socket.id
     };
     socket.emit('registered', users[socket.id]);
+    io.emit('userList', Object.values(users));
   });
   
+  // Manejar mensajes
   socket.on('sendMessage', (content) => {
     if (!users[socket.id] || !content.trim()) return;
     
     const message = {
       user: users[socket.id],
       content: content.trim(),
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString()
     };
     
     messages.push(message);
-    
-    try {
-      fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages));
-      io.emit('newMessage', message);
-    } catch (err) {
-      console.error('Error guardando mensaje:', err);
+    io.emit('newMessage', message);
+    updateTypingUsers(socket.id, false);
+  });
+  
+  // Typing indicator
+  socket.on('typing', (isTyping) => {
+    updateTypingUsers(socket.id, isTyping);
+  });
+  
+  // Desconexión
+  socket.on('disconnect', () => {
+    if (users[socket.id]) {
+      delete users[socket.id];
+      io.emit('userList', Object.values(users));
+      updateTypingUsers(socket.id, false);
     }
   });
   
-  socket.on('disconnect', () => {
-    delete users[socket.id];
-  });
+  function updateTypingUsers(socketId, isTyping) {
+    const user = users[socketId];
+    if (!user) return;
+    
+    if (isTyping) {
+      typingUsers.add(user.username);
+    } else {
+      typingUsers.delete(user.username);
+    }
+    
+    io.emit('typingUpdate', Array.from(typingUsers));
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Servidor en http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
