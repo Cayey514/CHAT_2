@@ -1,13 +1,20 @@
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const socketio = require('socket.io');
-const path = require('path');
-const fs = require('fs');
+import dotenv from 'dotenv';
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+
+dotenv.config();
+
+// Estas líneas son necesarias en ES Modules para obtener __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-import { Server } from 'socket.io';
 
 const io = new Server(server, {
   cors: {
@@ -19,7 +26,7 @@ const io = new Server(server, {
   }
 });
 
-// Manejo de conexiones
+// Conexión inicial
 io.on('connection', (socket) => {
   console.log('✅ Nuevo cliente conectado:', socket.id);
 
@@ -28,7 +35,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Almacenamiento en memoria (para demo)
+// Almacenamiento en memoria
 const users = {};
 const messages = [];
 const typingUsers = new Set();
@@ -41,10 +48,8 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 io.on('connection', (socket) => {
   console.log('Nuevo usuario conectado');
   
-  // Enviar historial
   socket.emit('messageHistory', messages);
   
-  // Registrar usuario
   socket.on('register', (username) => {
     const colors = ['#FF5733', '#33FF57', '#3357FF', '#F333FF', '#33FFF3'];
     users[socket.id] = {
@@ -55,8 +60,7 @@ io.on('connection', (socket) => {
     socket.emit('registered', users[socket.id]);
     io.emit('userList', Object.values(users));
   });
-  
-  // Manejar mensajes
+
   socket.on('sendMessage', (content) => {
     if (!users[socket.id] || !content.trim()) return;
     
@@ -71,13 +75,11 @@ io.on('connection', (socket) => {
     io.emit('newMessage', message);
     updateTypingUsers(socket.id, false);
   });
-  
-  // Typing indicator
+
   socket.on('typing', (isTyping) => {
     updateTypingUsers(socket.id, isTyping);
   });
-  
-  // Desconexión
+
   socket.on('disconnect', () => {
     if (users[socket.id]) {
       delete users[socket.id];
@@ -85,26 +87,27 @@ io.on('connection', (socket) => {
       updateTypingUsers(socket.id, false);
     }
   });
-  
+
   function updateTypingUsers(socketId, isTyping) {
     const user = users[socketId];
     if (!user) return;
-    
+
     if (isTyping) {
       typingUsers.add(user.username);
     } else {
       typingUsers.delete(user.username);
     }
-    
+
     io.emit('typingUpdate', Array.from(typingUsers));
   }
 });
 
-const { RateLimiterMemory } = require('rate-limiter-flexible');
+// Limitar conexiones
 const rateLimiter = new RateLimiterMemory({
-  points: 10, // 10 conexiones
-  duration: 1 // por segundo
+  points: 10,
+  duration: 1
 });
 
+// Iniciar servidor
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
