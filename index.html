@@ -3,14 +3,20 @@
 <head>
   <title>Chat </title>
   <link rel="stylesheet" href="style.css">
-
+  <style>
+    #chat-container {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <div id="auth">
     <h2>Bienvenido al Chat</h2>
     <h6>cayey</h6>
     <input type="text" id="username" placeholder="Tu nombre ">
+    <input type="password" id="password" placeholder="Contraseña">
     <button id="register-btn">Ingresar</button>
+    <p id="error-msg" style="color:red;"></p>
   </div>
   
   <div id="chat-container">
@@ -22,6 +28,56 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
- <script src="script.js"></script>
+  <script>
+    // Lista de usuarios y contraseñas válidas
+    const users = {
+      "alejandra": "1234",
+      "nona": "abcd",
+      "andrey": "4321",
+      "cayey": "pass",
+      "manco": "mocho",
+      "esteiver": "liendra",
+      "juan": "9090",
+      "maria": "abcd",
+      "darwin": "2323",
+      
+
+    };
+
+    const registerBtn = document.getElementById("register-btn");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const errorMsg = document.getElementById("error-msg");
+    const authDiv = document.getElementById("auth");
+    const chatContainer = document.getElementById("chat-container");
+
+    registerBtn.addEventListener("click", () => {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!username || !password) {
+        errorMsg.textContent = "Por favor ingrese usuario y contraseña";
+        return;
+      }
+
+      if (users[username] && users[username] === password) {
+        authDiv.style.display = "none";
+        chatContainer.style.display = "block";
+      } else {
+        errorMsg.textContent = "Usuario o contraseña incorrectos";
+        usernameInput.value = "";
+        passwordInput.value = "";
+        usernameInput.focus();
+      }
+    });
+
+    // También validar al presionar Enter en los campos de entrada
+    passwordInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        registerBtn.click();
+      }
+    });
+  </script>
+  <script src="script.js"></script>
 </body>
 </html>
